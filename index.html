@@ -1,0 +1,1305 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ARTBEE Polychromies — Étude préalable</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --ocre:#7C4F1E;--ocre-light:#9a6530;--ocre-pale:#f5ead8;--ocre-text:#5a3610;
+  --amber-pale:#faeeda;--amber-text:#854f0b;--red-pale:#fcebeb;--red-text:#a32d2d;
+  --surface-0:#f8f5f0;--surface-1:#f0ebe2;--surface-2:#ffffff;
+  --text-primary:#1a1a18;--text-secondary:#5a5a56;--text-muted:#9a9a94;
+  --border:rgba(0,0,0,0.10);--border-strong:rgba(0,0,0,0.18);
+  --radius:8px;--shadow:0 1px 4px rgba(0,0,0,0.08),0 0 0 0.5px rgba(0,0,0,0.06);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--surface-0);color:var(--text-primary);min-height:100vh;font-size:14px}
+button{font-family:inherit;cursor:pointer}
+input,select,textarea{font-family:inherit}
+.app{display:flex;flex-direction:column;height:100vh;overflow:hidden}
+.topbar{background:var(--surface-2);border-bottom:1px solid var(--border);padding:0 20px;height:56px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,0.06)}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-mark{width:34px;height:34px;border-radius:9px;background:#000;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden}.logo-mark img{width:26px;height:26px;object-fit:contain}
+.logo-title{font-size:15px;font-weight:600}
+.logo-sub{font-size:11px;color:var(--text-muted)}
+.topbar-actions{display:flex;gap:8px;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--radius);border:1px solid var(--border-strong);background:var(--surface-2);color:var(--text-primary);font-size:13px;font-weight:500;cursor:pointer;transition:all 0.15s;white-space:nowrap}
+.btn:hover{background:var(--surface-1)}
+.btn-primary{background:var(--ocre);border-color:var(--ocre);color:#fff}
+.btn-primary:hover{background:var(--ocre-light)}
+.btn-danger{background:var(--red-pale);border-color:#f09595;color:var(--red-text)}
+.btn-sm{padding:5px 10px;font-size:12px}
+.body{display:flex;flex:1;overflow:hidden}
+.sidebar{width:240px;border-right:1px solid var(--border);background:var(--surface-1);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
+.sidebar-header{padding:14px 14px 8px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:8px}
+.sidebar-search{width:100%;padding:7px 10px;border:1px solid var(--border-strong);border-radius:var(--radius);font-size:13px;background:var(--surface-2);color:var(--text-primary)}
+.sidebar-search:focus{outline:none;border-color:var(--ocre)}
+.sidebar-list{flex:1;overflow-y:auto;padding:8px}
+.sidebar-section{font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.07em;padding:8px 8px 4px}
+.work-item{padding:9px 10px;border-radius:var(--radius);cursor:pointer;display:flex;align-items:center;gap:10px;transition:background 0.1s;margin-bottom:2px}
+.work-item.active{background:var(--surface-2);box-shadow:var(--shadow)}
+.work-item:hover:not(.active){background:rgba(0,0,0,0.04)}
+.work-thumb{width:36px;height:36px;border-radius:6px;background:var(--surface-0);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;overflow:hidden}
+.work-thumb img{width:100%;height:100%;object-fit:cover}
+.work-info{min-width:0;flex:1}
+.work-name{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.work-meta{font-size:11px;color:var(--text-muted);margin-top:1px}
+.sidebar-footer{padding:10px 14px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:6px}
+.content-area{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.nav{background:var(--surface-2);border-bottom:1px solid var(--border);padding:0 20px;display:flex;flex-shrink:0}
+.nav-tab{padding:14px 16px;font-size:13px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;color:var(--text-secondary);display:flex;align-items:center;gap:7px;transition:all 0.15s;white-space:nowrap}
+.nav-tab.active{border-bottom-color:var(--ocre);color:var(--text-primary)}
+.nav-tab:hover:not(.active){color:var(--text-primary);background:var(--surface-1)}
+.scroll-area{flex:1;overflow-y:auto;padding:24px}
+.panel-hidden{display:none!important}
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px;color:var(--text-muted);text-align:center}
+.section-title{font-size:14px;font-weight:600;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.section-title .icon{color:var(--ocre);font-size:16px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.form-grid.g3{grid-template-columns:1fr 1fr 1fr}
+.form-grid.g1{grid-template-columns:1fr}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.04em}
+.field input,.field select,.field textarea{border:1px solid var(--border-strong);border-radius:var(--radius);padding:8px 10px;font-size:13px;background:var(--surface-2);color:var(--text-primary);transition:border-color 0.15s;resize:vertical}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--ocre);box-shadow:0 0 0 3px rgba(124,79,30,0.10)}
+.field textarea{min-height:80px;line-height:1.5}
+.divider{border:none;border-top:1px solid var(--border);margin:20px 0}
+.card{background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;box-shadow:var(--shadow)}
+.card-title{font-size:13px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:7px}
+/* Photos */
+.photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-top:12px}
+.photo-card{position:relative;border-radius:8px;overflow:hidden;background:var(--surface-1);border:1px solid var(--border);aspect-ratio:4/3}
+.photo-card img{width:100%;height:100%;object-fit:cover;cursor:pointer;display:block}
+.photo-overlay{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.6));padding:6px 8px}
+.photo-label{font-size:10px;color:#fff;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.photo-delete{position:absolute;top:5px;right:5px;background:rgba(0,0,0,0.5);border:none;color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer;opacity:0;transition:opacity 0.15s}
+.photo-card:hover .photo-delete{opacity:1}
+.photo-add{border:2px dashed var(--border-strong);border-radius:8px;aspect-ratio:4/3;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;gap:6px;color:var(--text-muted);font-size:12px;transition:all 0.15s;background:transparent}
+.photo-add:hover{border-color:var(--ocre);color:var(--ocre);background:var(--ocre-pale)}
+.photo-add-icon{font-size:24px}
+/* Toast */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a1a18;color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:500;z-index:9999;opacity:0;transition:opacity 0.2s;pointer-events:none}
+.toast.show{opacity:1}
+/* Lightbox */
+.lightbox{position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:99999;display:flex;align-items:center;justify-content:center;cursor:zoom-out}
+.lightbox img{max-width:90vw;max-height:82vh;border-radius:8px;object-fit:contain;cursor:default}
+.lightbox-close{position:fixed;top:16px;right:20px;background:rgba(255,255,255,0.15);color:#fff;border:none;border-radius:8px;padding:6px 16px;font-size:14px;cursor:pointer;z-index:100000}
+.lightbox-close:hover{background:rgba(255,255,255,0.3)}
+/* Login */
+.login-overlay{position:fixed;inset:0;background:var(--surface-0);z-index:9000;display:flex;align-items:center;justify-content:center}
+.login-box{background:var(--surface-2);border:1px solid var(--border);border-radius:16px;padding:40px;width:340px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.12)}
+.login-logo{width:56px;height:56px;border-radius:14px;background:#000;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;overflow:hidden}.login-logo img{width:44px;height:44px;object-fit:contain}
+.login-title{font-size:20px;font-weight:700;margin-bottom:4px}
+.login-sub{font-size:13px;color:var(--text-muted);margin-bottom:24px}
+.login-input{width:100%;padding:10px 14px;border:1px solid var(--border-strong);border-radius:var(--radius);font-size:14px;margin-bottom:12px;background:var(--surface-2)}
+.login-input:focus{outline:none;border-color:var(--ocre)}
+.login-btn{width:100%;padding:11px;background:var(--ocre);color:#fff;border:none;border-radius:var(--radius);font-size:14px;font-weight:600;cursor:pointer}
+.login-btn:hover{background:var(--ocre-light)}
+/* Modal photo */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:7000;display:flex;align-items:center;justify-content:center}
+.modal-box{background:var(--surface-2);border-radius:12px;padding:24px;width:400px;box-shadow:0 8px 32px rgba(0,0,0,0.18)}
+.modal-title{font-size:15px;font-weight:600;margin-bottom:16px}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+/* Stratigraphie */
+.strati-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+.strati-table th{background:var(--ocre-pale);color:var(--ocre-text);padding:7px 10px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em}
+.strati-table td{padding:7px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+.strati-table tr:last-child td{border-bottom:none}
+.strati-table input,.strati-table select{border:1px solid var(--border);border-radius:4px;padding:4px 6px;font-size:12px;width:100%;background:var(--surface-2)}
+.strati-table tr.dragging{opacity:0.4}
+.strati-table tr.drag-over{outline:2px solid var(--ocre);background:var(--ocre-pale)}
+.btn-strati-add{margin-top:8px;font-size:12px;color:var(--ocre);background:none;border:none;cursor:pointer;padding:0;font-weight:500}
+.btn-strati-add:hover{text-decoration:underline}
+/* Multi-zones strati */
+.strati-zone{background:var(--surface-2);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden;box-shadow:var(--shadow)}
+.strati-zone-header{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--ocre-pale);border-bottom:1px solid rgba(124,79,30,0.15)}
+.strati-zone-num{width:26px;height:26px;border-radius:50%;background:var(--ocre);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.strati-zone-title{font-size:13px;font-weight:600;color:var(--ocre-text);flex:1}
+.strati-zone-title input{background:none;border:none;outline:none;font:inherit;color:inherit;width:100%;padding:0}
+.strati-zone-title input::placeholder{color:var(--ocre-text);opacity:0.5}
+.strati-zone-body{padding:14px 16px}
+.strati-zone-photos{margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
+.strati-photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-top:8px;align-items:start}
+.strati-photo-item{position:relative;border-radius:8px;overflow:hidden;border:1px solid var(--border);background:#1a1a18;aspect-ratio:4/3}
+.strati-photo-item img{width:100%;height:100%;object-fit:cover;display:block;cursor:pointer}
+.strati-photo-overlay{position:absolute;inset:0;background:rgba(0,0,0,0);transition:background 0.2s;display:flex;flex-direction:column;justify-content:space-between;padding:6px}
+.strati-photo-item:hover .strati-photo-overlay{background:rgba(0,0,0,0.45)}
+.strati-photo-actions{display:flex;gap:4px;opacity:0;transition:opacity 0.2s}
+.strati-photo-item:hover .strati-photo-actions{opacity:1}
+.strati-photo-action-btn{width:26px;height:26px;border-radius:5px;border:none;background:rgba(255,255,255,0.85);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center}
+.strati-photo-label-bar{background:rgba(0,0,0,0.6);color:#fff;font-size:10px;padding:3px 6px;border-radius:4px;margin-top:auto;word-break:break-word;line-height:1.3}
+.strati-photo-add{border:2px dashed var(--border-strong);border-radius:8px;aspect-ratio:4/3;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;gap:4px;color:var(--text-muted);font-size:11px;transition:all 0.15s}
+.strati-photo-add:hover{border-color:var(--ocre);color:var(--ocre);background:var(--ocre-pale)}
+.strati-photo-add-icon{font-size:22px}
+.statusbar{padding:8px 20px;background:var(--surface-1);border-top:1px solid var(--border);font-size:11px;color:var(--text-muted);flex-shrink:0}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-overlay" id="login-overlay">
+  <div class="login-box">
+    <div class="login-logo"><img></div>
+    <div class="login-title">ARTBEE Polychromies</div>
+    <div class="login-sub">Études préalables · Peintures murales & Polychromies</div>
+    <input type="password" class="login-input" id="login-pw" placeholder="Mot de passe" />
+    <button class="login-btn" onclick="doLogin()">Accéder</button>
+  </div>
+</div>
+
+<div class="app" id="main-app" style="display:none">
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="logo">
+      <div class="logo-mark"><img></div>
+      <div>
+        <div class="logo-title">ARTBEE Polychromies</div>
+        <div class="logo-sub">Études préalables · Peintures murales & Polychromies</div>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn btn-sm" onclick="copyClientLink()" id="btn-share" style="display:inline-flex;" title="Copier le lien client">🔗 Lien client</button>
+      <button class="btn btn-sm btn-primary" onclick="exportPDF()">📄 Exporter PDF</button>
+      <button class="btn btn-sm btn-danger" onclick="doLogout()">Déconnexion</button>
+    </div>
+  </div>
+
+  <div class="body">
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <input class="sidebar-search" type="text" placeholder="🔍 Rechercher..." id="search-input" oninput="renderList()" />
+        <button class="btn btn-primary btn-sm" onclick="newBuilding()">+ Nouveau dossier</button>
+      </div>
+      <div class="sidebar-list" id="works-list"><div style="padding:12px;color:var(--text-muted);font-size:12px">Chargement…</div></div>
+      <div class="sidebar-footer">
+        <div style="font-size:11px;color:var(--text-muted)" id="count-label"></div>
+      </div>
+    </div>
+
+    <!-- CONTENT -->
+    <div class="content-area">
+      <div class="nav" id="main-nav" style="display:none">
+        <div class="nav-tab active" data-tab="identification" onclick="switchTab(this)">🏛 Identification</div>
+        <div class="nav-tab" data-tab="description" onclick="switchTab(this)">📋 Description</div>
+        <div class="nav-tab" data-tab="stratigraphie" onclick="switchTab(this)">🔬 Stratigraphie</div>
+        <div class="nav-tab" data-tab="etat" onclick="switchTab(this)">⚠️ État de conservation</div>
+        <div class="nav-tab" data-tab="recommandations" onclick="switchTab(this)">📝 Recommandations</div>
+        <div class="nav-tab" data-tab="photos" onclick="switchTab(this)">📷 Photos</div>
+      </div>
+
+      <div class="scroll-area" id="scroll-area">
+        <div class="empty-state" id="empty-state">
+          <div style="font-size:48px">🏛</div>
+          <div style="font-size:15px;font-weight:600">Aucun dossier sélectionné</div>
+          <div style="font-size:13px">Créez un nouveau dossier ou sélectionnez-en un dans la liste</div>
+          <button class="btn btn-primary" onclick="newBuilding()">+ Nouveau dossier</button>
+        </div>
+
+        <!-- TAB: IDENTIFICATION -->
+        <div id="tab-identification" class="panel-hidden">
+          <div class="section-title"><span class="icon">🏛</span>Identification du bâtiment / espace</div>
+          <div class="form-grid">
+            <div class="field"><label>Intitulé du dossier *</label><input id="f-titre" oninput="autoSave()" placeholder="ex: Église Saint-Nicolas — Chœur"/></div>
+            <div class="field"><label>Référence / N° inventaire</label><input id="f-ref" oninput="autoSave()" /></div>
+          </div>
+          <div class="form-grid">
+            <div class="field"><label>Type de bâtiment</label>
+              <select id="f-type" onchange="autoSave()">
+                <option value="">— Choisir —</option>
+                <option>Église / Chapelle</option>
+                <option>Château / Manoir</option>
+                <option>Hôtel de ville</option>
+                <option>Maison bourgeoise</option>
+                <option>Abbaye / Couvent</option>
+                <option>Édifice civil</option>
+                <option>Façade extérieure</option>
+                <option>Autre</option>
+              </select>
+            </div>
+            <div class="field"><label>Espace / Localisation</label><input id="f-espace" oninput="autoSave()" placeholder="ex: Nef, Choeur, Voûte, Façade nord…"/></div>
+          </div>
+          <div class="form-grid">
+            <div class="field"><label>Adresse</label><input id="f-adresse" oninput="autoSave()" /></div>
+            <div class="field"><label>Commune</label><input id="f-commune" oninput="autoSave()" /></div>
+          </div>
+          <div class="form-grid">
+            <div class="field"><label>Propriétaire</label><input id="f-proprietaire" oninput="autoSave()" /></div>
+            <div class="field"><label>Gestionnaire / Contact</label><input id="f-gestionnaire" oninput="autoSave()" /></div>
+          </div>
+          <div class="form-grid">
+            <div class="field"><label>Période de construction</label><input id="f-periode" oninput="autoSave()" placeholder="ex: XVe siècle, 1780-1820…"/></div>
+            <div class="field"><label>Classement / Protection</label><input id="f-classement" oninput="autoSave()" placeholder="ex: Classé Région wallonne…"/></div>
+          </div>
+          <div class="form-grid g1">
+            <div class="field"><label>Historique et contexte</label><textarea id="f-historique" oninput="autoSave()" rows="4"></textarea></div>
+          </div>
+          <hr class="divider">
+          <div class="section-title"><span class="icon">👤</span>Intervenant</div>
+          <div class="form-grid">
+            <div class="field"><label>Restaurateur / Expert</label><input id="f-restaurateur" oninput="autoSave()" /></div>
+            <div class="field"><label>Date de l'étude</label><input type="date" id="f-date" oninput="autoSave()" /></div>
+          </div>
+          <div class="form-grid">
+            <div class="field"><label>Commanditaire</label><input id="f-commanditaire" oninput="autoSave()" /></div>
+            <div class="field"><label>N° de rapport</label><input id="f-rapport" oninput="autoSave()" /></div>
+          </div>
+        </div>
+
+        <!-- TAB: DESCRIPTION -->
+        <div id="tab-description" class="panel-hidden">
+          <div class="section-title"><span class="icon">📋</span>Description des peintures / polychromies</div>
+          <div class="form-grid">
+            <div class="field"><label>Type de peinture</label>
+              <select id="f-peinture-type" onchange="autoSave()">
+                <option value="">— Choisir —</option>
+                <option>Peinture murale à fresque</option>
+                <option>Peinture murale à la détrempe</option>
+                <option>Peinture murale à l'huile</option>
+                <option>Badigeon</option>
+                <option>Polychromie architecturale</option>
+                <option>Polychromie sculptée</option>
+                <option>Décor peint sur enduit</option>
+                <option>Faux-marbre / Faux-bois</option>
+                <option>Dorure / Argenture</option>
+                <option>Autre</option>
+              </select>
+            </div>
+            <div class="field"><label>Surface approximative</label><input id="f-surface" oninput="autoSave()" placeholder="ex: 45 m²"/></div>
+          </div>
+          <div class="form-grid">
+            <div class="field"><label>Support</label>
+              <select id="f-support" onchange="autoSave()">
+                <option value="">— Choisir —</option>
+                <option>Maçonnerie — Pierre calcaire</option>
+                <option>Maçonnerie — Brique</option>
+                <option>Enduit — Chaux</option>
+                <option>Enduit — Plâtre</option>
+                <option>Bois</option>
+                <option>Pierre de taille</option>
+                <option>Autre</option>
+              </select>
+            </div>
+            <div class="field"><label>Datation estimée des peintures</label><input id="f-datation" oninput="autoSave()" placeholder="ex: XVIIe siècle, vers 1750…"/></div>
+          </div>
+          <div class="form-grid g1">
+            <div class="field"><label>Description iconographique / Thème</label><textarea id="f-iconographie" oninput="autoSave()" rows="3" placeholder="Décrivez le thème, les motifs, le programme décoratif…"></textarea></div>
+          </div>
+          <div class="form-grid g1">
+            <div class="field"><label>Description technique / Style</label><textarea id="f-description-tech" oninput="autoSave()" rows="3"></textarea></div>
+          </div>
+          <hr class="divider">
+          <div class="section-title"><span class="icon">🔍</span>Analyses effectuées</div>
+          <div class="form-grid g1">
+            <div class="field"><label>Examens visuels et sous lumières spéciales</label><textarea id="f-examens" oninput="autoSave()" rows="3" placeholder="UV, IR, lumière rasante, macro-photographie…"></textarea></div>
+          </div>
+          <div class="form-grid g1">
+            <div class="field"><label>Prélèvements et analyses de laboratoire</label><textarea id="f-analyses" oninput="autoSave()" rows="3" placeholder="Stratigraphie en coupe, identification pigments, liants, analyses XRF…"></textarea></div>
+          </div>
+          <div class="form-grid g1">
+            <div class="field"><label>Observations sur les campagnes de peinture</label><textarea id="f-campagnes" oninput="autoSave()" rows="3" placeholder="Nombre de couches, chronologie, repeints identifiés…"></textarea></div>
+          </div>
+        </div>
+
+        <!-- TAB: STRATIGRAPHIE -->
+        <div id="tab-stratigraphie" class="panel-hidden">
+          <div class="section-title" style="justify-content:space-between">
+            <span><span class="icon">🔬</span>Zones stratigraphiques</span>
+            <button class="btn btn-primary btn-sm" onclick="addStratiZone()">+ Nouvelle zone</button>
+          </div>
+          <p style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Créez une zone par localisation étudiée. Chaque zone a son tableau de couches et ses photos.</p>
+          <div id="strati-zones-container"></div>
+          <div class="form-grid g1" style="margin-top:8px">
+            <div class="field"><label>Observations générales sur la stratigraphie</label><textarea id="f-strati-obs" oninput="autoSave()" rows="4"></textarea></div>
+          </div>
+        </div>
+
+        <!-- TAB: ÉTAT DE CONSERVATION -->
+        <div id="tab-etat" class="panel-hidden">
+          <div class="section-title"><span class="icon">⚠️</span>État de conservation</div>
+          <div class="form-grid">
+            <div class="field"><label>État général</label>
+              <select id="f-etat-general" onchange="autoSave()">
+                <option value="">— Évaluation —</option>
+                <option>Bon état</option>
+                <option>État satisfaisant</option>
+                <option>État moyen</option>
+                <option>Mauvais état</option>
+                <option>Très mauvais état — Urgence</option>
+              </select>
+            </div>
+            <div class="field"><label>Stabilité structurelle</label>
+              <select id="f-stabilite" onchange="autoSave()">
+                <option value="">— Évaluation —</option>
+                <option>Stable</option>
+                <option>Partiellement instable</option>
+                <option>Instable — Consolidation urgente</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-grid g1">
+            <div class="field"><label>Dégradations du support</label><textarea id="f-degrad-support" oninput="autoSave()" rows="3" placeholder="Fissures, soulèvements, détachements d'enduit, humidité, efflorescences…"></textarea></div>
+          </div>
+          <div class="form-grid g1">
+            <div class="field"><label>Dégradations de la couche picturale</label><textarea id="f-degrad-picturale" oninput="autoSave()" rows="3" placeholder="Lacunes, soulèvements, cloques, pulvérulence, noircissement, surpeints…"></textarea></div>
+          </div>
+          <div class="form-grid g1">
+            <div class="field"><label>Dégradations de surface</label><textarea id="f-degrad-surface" oninput="autoSave()" rows="3" placeholder="Encrassement, vernis altéré, retouches anciennes, graffiti…"></textarea></div>
+          </div>
+          <div class="form-grid g1">
+            <div class="field"><label>Causes des dégradations</label><textarea id="f-causes" oninput="autoSave()" rows="3" placeholder="Infiltrations d'eau, condensation, sels, vibrations, usage…"></textarea></div>
+          </div>
+          <div class="form-grid g1">
+            <div class="field"><label>Zones à risque / prioritaires</label><textarea id="f-zones-risque" oninput="autoSave()" rows="3"></textarea></div>
+          </div>
+        </div>
+
+        <!-- TAB: RECOMMANDATIONS -->
+        <div id="tab-recommandations" class="panel-hidden">
+          <div class="section-title"><span class="icon">📝</span>Recommandations & Propositions d'intervention</div>
+          <div class="form-grid">
+            <div class="field"><label>Urgence d'intervention</label>
+              <select id="f-urgence" onchange="autoSave()">
+                <option value="">— Niveau —</option>
+                <option>Surveillance</option>
+                <option>Intervention à planifier</option>
+                <option>Intervention à court terme</option>
+                <option>Intervention urgente</option>
+              </select>
+            </div>
+            <div class="field"><label>Type d'intervention principal</label>
+              <select id="f-intervention-type" onchange="autoSave()">
+                <option value="">— Choisir —</option>
+                <option>Conservation préventive</option>
+                <option>Consolidation / Fixation</option>
+                <option>Nettoyage</option>
+                <option>Comblement des lacunes</option>
+                <option>Retouche chromatique</option>
+                <option>Dégagement de surpeints</option>
+                <option>Traitement des sels</option>
+                <option>Traitement des humidités</option>
+                <option>Traitement complet</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-grid g1">
+            <div class="field"><label>Travaux préalables recommandés (bâtiment)</label><textarea id="f-travaux-batiment" oninput="autoSave()" rows="3" placeholder="Étanchéité, chauffage, ventilation, traitement des sels à la source…"></textarea></div>
+          </div>
+          <div class="form-grid g1">
+            <div class="field"><label>Propositions de traitement des peintures</label><textarea id="f-propositions" oninput="autoSave()" rows="4"></textarea></div>
+          </div>
+          <div class="form-grid g1">
+            <div class="field"><label>Proposition de mise en valeur</label><textarea id="f-mise-en-valeur" oninput="autoSave()" rows="3" placeholder="Éclairage, médiation, documentation complémentaire…"></textarea></div>
+          </div>
+          <div class="form-grid g1">
+            <div class="field"><label>Estimation budgétaire</label><textarea id="f-budget" oninput="autoSave()" rows="2" placeholder="Fourchette indicative, par phases si nécessaire…"></textarea></div>
+          </div>
+          <div class="form-grid g1">
+            <div class="field"><label>Remarques complémentaires</label><textarea id="f-remarques" oninput="autoSave()" rows="3"></textarea></div>
+          </div>
+        </div>
+
+        <!-- TAB: PHOTOS -->
+        <div id="tab-photos" class="panel-hidden">
+          <div class="section-title"><span class="icon">📷</span>Documentation photographique</div>
+
+          <div id="photo-sections"></div>
+        </div>
+      </div>
+      <div class="statusbar" id="statusbar">Prêt</div>
+    </div>
+  </div>
+</div>
+
+<!-- LIGHTBOX -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox(event)" style="display:none">
+  <button class="lightbox-close" onclick="document.getElementById('lightbox').style.display='none'">✕ Fermer</button>
+  <div style="display:flex;flex-direction:column;align-items:center;gap:10px;max-width:90vw" onclick="event.stopPropagation()">
+    <img id="lb-img" src="" alt="" />
+    <div id="lb-caption" style="color:#fff;font-size:13px;text-align:center;background:rgba(0,0,0,0.55);padding:4px 12px;border-radius:6px;display:none"></div>
+  </div>
+</div>
+
+<!-- MODAL PHOTO LABEL -->
+<div class="modal-overlay" id="photo-label-modal" style="display:none">
+  <div class="modal-box">
+    <div class="modal-title">Annoter la photo</div>
+    <div class="field" style="margin-bottom:12px">
+      <label>Catégorie</label>
+      <select id="modal-categorie">
+        <option value="generale">Vue générale</option>
+        <option value="localisation">Localisation / Vue d'ensemble</option>
+        <option value="lumiere_rasante">Lumière rasante</option>
+        <option value="uv">Fluorescence UV</option>
+        <option value="ir">Infrarouge</option>
+        <option value="detail">Détail / Macro</option>
+        <option value="degradation">Dégradation</option>
+        <option value="prelevement">Emplacement prélèvement</option>
+        <option value="apres">Après intervention</option>
+        <option value="autre">Autre</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Légende</label>
+      <input type="text" id="modal-legende" placeholder="Description courte…" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="cancelPhotoLabel()">Annuler</button>
+      <button class="btn btn-primary" onclick="confirmPhotoLabel()">Valider</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL STRATI PHOTO LABEL -->
+<div class="modal-overlay" id="strati-photo-modal" style="display:none">
+  <div class="modal-box">
+    <div class="modal-title">Annoter la photo (stratigraphie)</div>
+    <div class="field" style="margin-bottom:12px">
+      <label>Catégorie</label>
+      <select id="spm-categorie">
+        <option value="generale">Vue générale de la zone</option>
+        <option value="coupes">Coupe stratigraphique</option>
+        <option value="uv">Fluorescence UV</option>
+        <option value="lumiere_rasante">Lumière rasante</option>
+        <option value="ir">Infrarouge</option>
+        <option value="macro">Macrophotographie</option>
+        <option value="prelevement">Emplacement prélèvement</option>
+        <option value="autre">Autre</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Légende</label>
+      <input type="text" id="spm-legende" placeholder="ex: Coupe N°2, zone voûte…" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="cancelStratiPhotoModal()">Annuler</button>
+      <button class="btn btn-primary" onclick="confirmStratiPhotoModal()">Valider</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://mlozljocwzmncpvhykgy.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_i-PB7CHJRj6KcKaOePlv6Q_owtEDscs';
+const APP_PASSWORD = 'NEEartbeeconservation2026';
+const APP_URL = 'https://artbee-poly.netlify.app/';
+const LOGO_B64 = 'iVBORw0KGgoAAAANSUhEUgAABUYAAAVGCAYAAABSQWFhAAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAC4jAAAuIwF4pT92AAAAB3RJTUUH4wcYCh8GUidOkQAAIABJREFUeNrs3dly5EiOBVBnmv7/l6MfMqtaqdISCxcA9xyzeZuxqSSdcODSGdrWWrcFAAAAABDkl0sAAAAAAKQRjAIAAAAAcQSjAAAAAEAcwSgAAAAAEEcwCgAAAADEEYwCAAAAAHEEowAAAABAHMEoAAAAABBHMAoAAAAAxBGMAgAAAABxBKMAAAAAQBzBKAAAAAAQRzAKAAAAAMQRjAIAAAAAcQSjAAAAAEAcwSgAAAAAEEcwCgAAAADEEYwCAAAAAHEEowAAAABAHMEoAAAAABBHMAoAAAAAxBGMAgAAAABxBKMAAAAAQBzBKAAAAAAQRzAKAAAAAMQRjAIAAAAAcQSjAAAAAEAcwSgAAAAAEEcwCgAAAADEEYwCAAAAAHEEowAAAABAHMEoAAAAABBHMAoAAAAAxBGMAgAAAABxBKMAAAAAQBzBKAAAAAAQRzAKAAAAAMQRjAIAAAAAcQSjAAAAAEAcwSgAAAAAEEcwCgAAAADEEYwCAAAAAHEEowAAAABAHMEoAAAAABBHMAoAAAAAxBGMAgAAAABxBKMAAAAAQBzBKAAAAAAQRzAKAAAAAMQRjAIAAAAAcQSjAAAAAEAcwSgAAAAAEEcwCgAAAADEEYwCAAAAAHEEowAAAABAHMEoAAAAABBHMAoAAAAAxBGMAgAAAABxBKMAAAAAQBzBKAAAAAAQRzAKAAAAAMQRjAIAAAAAcQSjAAAAAEAcwSgAAAAAEEcwCgAAAADEEYwCAAAAAHEEowAAAABAHMEoAAAAABBHMAoAAAAAxBGMAgAAAABxBKMAAAAAQBzBKAAAAAAQRzAKAAAAAMQRjAIAAAAAcQSjAAAAAEAcwSgAAAAAEEcwCgAAAADEEYwCAAAAAHEEowAAAABAHMEoAAAAABBHMAoAAAAAxBGMAgAAAABxBKMAAAAAQBzBKAAAAAAQRzAKAAAAAMQRjAIAAAAAcQSjAAAAAEAcwSgAAAAAEEcwCgAAAADEEYwCAAAAAHEEowAAAABAHMEoAAAAABBHMAoAAAAAxBGMAgAAAABxBKMAAAAAQBzBKAAAAAAQRzAKAAAAAMQRjAIAAAAAcQSjAAAAAEAcwSgAAAAAEEcwCgAAAADEEYwCAAAAAHEEowAAAABAHMEoAAAAABBHMAoAAAAAxBGMAgAAAABxBKMAAAAAQBzBKAAAAAAQRzAKAAAAAMQRjAIAAAAAcQSjAAAAAEAcwSgAAAAAEEcwCgAAAADEEYwCAAAAAHEEowAAAABAHMEoAAAAABBHMAoAAAAAxBGMAgAAAABxBKMAAAAAQBzBKAAAAAAQRzAKAAAAAMQRjAIAAAAAcQSjAAAAAEAcwSgAAAAAEEcwCgAAAADEEYwCAAAAAHEEowAAAABAHMEoAAAAABBHMAoAAAAAxBGMAgAAAABxBKMAAAAAQBzBKAAAAAAQRzAKAAAAAMQRjAIAAAAAcQSjAAAAAEAcwSgAAAAAEEcwCgAAAADEEYwCAAAAAHEEowAAAABAHMEoAAAAABBHMAoAAAAAxBGMAgAAAABxBKMAAAAAQBzBKAAAAAAQRzAKAAAAAMQRjAIAAAAAcQSjAAAAAEAcwSgAAAAAEEcwCgAAAADEEYwCAAAAAHEEowAAAABAHMEoAAAAABBHMAoAAAAAxBGMAgAAAABxBKMAAAAAQBzBKAAAAAAQRzAKAAAAAMQRjAIAAAAAcQSjAAAAAEAcwSgAAAAAEEcwCgAAAADEEYwCAAAAAHEEowAAAABAHMEoAAAAABBHMAoAAAAAxBGMAgAAAABxBKMAAAAAQBzBKAAAAAAQRzAKAAAAAMQRjAIAAAAAcQSjAAAAAEAcwSgAAAAAEEcwCgAAAADEEYwCAAAAAHEEowAAAABAHMEoAAAAABBHMAoAAAAAxBGMAgAAAABxBKMAAAAAQBzBKAAAAAAQRzAKAAAAAMQRjAIAAAAAcQSjAAAAAEAcwSgAAAAAEEcwCgAAAADEEYwCAAAAAHEEowAAAABAHMEoAAAAABBHMAoAAAAAxBGMAgAAAABxBKMAAAAAQBzBKAAAAAAQRzAKAAAAAMQRjAIAAAAAcQSjAAAAAEAcwSgAAAAAEEcwCgAAAADEEYwCAAAAAHEEowAAAABAHMEoAAAAABBHMAoAAAAAxBGMAgAAAABxBKMAAAAAQBzBKAAAAAAQRzAKAAAAAMQRjAIAAAAAcQSjAAAAAEAcwSgAAAAAEEcwCgAAAADEEYwCAAAAAHEEowAAAABAHMEoAAAAABBHMAoAAAAA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glEAAAAAII5gFAAAAACIIxgFAAAAAOIIRgEAAACAOIJRAAAAACCOYBQAAAAAiCMYBQAAAADiCEYBAAAAgDiCUQAAAAAgjmAUAAAAAIgjGAUAAAAA4ghGAQAAAIA4glEAAAAAII5gFAAAAACIIxgFAAAAAOIIRgEAAACAOIJRAAAAACCOYBQAAAAAiCMYBQAAAADiCEYBAAAAgDiCUQAAAAAgjmAUAAAAAIgjGAUAAAAA4ghGAQAAAIA4glEAAAAAII5gFAAAAACIIxgFAAAAAOIIRgEAAACAOIJRAAAAACCOYBQAAAAAiCMYBQAAAADiCEYBAAAAgDiCUQAAAAAgjmAUAAAAAIgjGAUAAAAA4ghGAQAAAIA4glEAAAAAII5gFAAAAACIIxgFAAAAAOIIRgEAAACAOIJRAAAAACCOYBQAAAAAiCMYBQAAAADiCEYBAAAAgDiCUQAAAAAgjmAUAAAAAIgjGAUAAAAA4ghGAQAAAIA4glEAAAAAII5gFAAAAACIIxgFAAAAAOIIRgEAAACAOIJRAAAAACCOYBQAAAAAiCMYBQAAAADiCEYBAAAAgDiCUQAAAAAgjmAUAAAAAIgjGAUAAAAA4ghGAQAAAIA4glEAAAAAII5gFAAAAACIIxgFAAAAAOIIRgEAAACAOIJRAAAAACCOYBQAAAAAiCMYBQAAAADiCEYBAAAAgDiCUQAAAAAgjmAUAAAAAIgjGAUAAAAA4ghGAQAAAIA4glEAAAAAII5gFAAAAACIIxgFAAAAAOIIRgEAAACAOIJRAAAAACCOYBQAAAAAiCMYBQAAAADiCEYBAAAAgDiCUQAAAAAgjmAUAAAAAIgjGAUAAAAA4ghGAQAAAIA4glEAAAAAII5gFAAAAACIIxgFAAAAAOIIRgEAAACAOIJRAAAAACCOYBQAAAAAiCMYBQAAAADiCEYBAAAAgDiCUQAAAAAgjmAUAAAAAIgjGAUAAAAA4ghGAQAAAIA4glEAAAAAII5gFAAAAACIIxgFAAAAAOIIRgEAAACAOIJRAAAAACCOYBQAAAAAiCMYBQAAAADiCEYBAAAAgDiCUQAAAAAgjmAUAAAAAIgjGAUAAAAA4ghGAQAAAIA4glEAAAAAII5gFAAAAACIIxgFAAAAAOIIRgEAAACAOIJRAAAAACCOYBQAAAAAiCMYBQAAAADiCEYBAAAAgDiCUQAAAAAgjmAUAAAAAIgjGAUAAAAA4ghGAQAAAIA4glEAAAAAII5gFAAAAACIIxgFAAAAAOIIRgEAAACAOIJRAAAAACCOYBQAAAAAiCMYBQAAAADiCEYBAAAAgDiCUQAAAAAgjmAUAAAAAIgjGAUAAAAA4ghGAQAAAIA4glEAAAAAII5gFAAAAACIIxgFAAAAAOIIRgEAAACAOIJRAAAAACCOYBQAAAAAiCMYBQAAAADiCEYBAAAAgDiCUQAAAAAgjmAUAAAAAIgjGAUAAAAA4ghGAQAAAIA4glEAAAAAII5gFAAAAACIIxgFAAAAAOIIRgEAAACAOIJRAAAAACCOYBQAAAAAiCMYBQAAAADiCEYBAAAAgDiCUQAAAAAgjmAUAAAAAIgjGAUAAAAA4ghGAQAAAIA4glEAAAAAII5gFAAAAACIIxgFAAAAAOIIRgEAAACAOIJRAAAAACCOYBQAAAAAiCMYBQAAAADiCEYBAAAAgDiCUQAAAAAgjmAUAAAAAIgjGAUAAAAA4ghGAQAAAIA4glEAAAAAII5gFAAAAACIIxgFAAAAAOIIRgEAAACAOIJRAAAAACCOYBQAAAAAiCMYBQAAAADiCEYBAAAAgDiCUQAAAAAgjmAUAAAAAIgjGAUAAAAA4ghGAQAAAIA4glEAAAAAII5gFAAAAACIIxgFAAAAAOIIRgEAAACAOIJRAAAAACCOYBQAAAAAiCMYBQAAAADiCEYBAAAAgDiCUQAAAAAgjmAUAAAAAIgjGAUAAAAA4ghGAQAAAIA4glEAAAAAII5gFAAAAACIIxgFAAAAAOIIRgEAAACAOIJRAAAAACCOYBQAAAAAiCMYBQAAAADiCEYBAAAAgDiCUQAAAAAgjmAUAAAAAIgjGAUAAAAA4ghGAQAAAIA4glEAAAAAII5gFAAAAACIIxgFAAAAAOIIRgEAAACAOIJRAAAAACCOYBQAAAAAiCMYBQAAAADiCEYBAAAAgDj/AxXKunjebSDWAAAAAElFTkSuQmCC';
+const TABLE = 'buildings';
+const BUCKET = 'photos';
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const catLabels = {
+  generale:'Vue générale', localisation:'Localisation', lumiere_rasante:'Lumière rasante',
+  uv:'Fluorescence UV', ir:'Infrarouge', detail:'Détail / Macro',
+  degradation:'Dégradation', prelevement:'Prélèvement', apres:'Après intervention', autre:'Autre'
+};
+
+let works = {}, currentId = null, saveTimer = null;
+let pendingPhotoBlob = null, pendingPhotoBlobName = null;
+
+/* ── AUTH ── */
+function doLogin() {
+  const pw = document.getElementById('login-pw').value;
+  if (pw === APP_PASSWORD) {
+    sessionStorage.setItem('poly_auth','1');
+    document.getElementById('login-overlay').style.display='none';
+    document.getElementById('main-app').style.display='flex';
+    loadWorks();
+  } else {
+    showToast('Mot de passe incorrect');
+    document.getElementById('login-pw').value='';
+  }
+}
+function doLogout() {
+  sessionStorage.removeItem('poly_auth');
+  location.reload();
+}
+document.getElementById('login-pw').addEventListener('keydown',e=>{ if(e.key==='Enter') doLogin(); });
+if (sessionStorage.getItem('poly_auth')==='1') {
+  document.getElementById('login-overlay').style.display='none';
+  document.getElementById('main-app').style.display='flex';
+  loadWorks();
+}
+
+/* ── DATA ── */
+async function loadWorks() {
+  const {data,error} = await sb.from(TABLE).select('*').order('created_at',{ascending:false});
+  if (error) { showToast('Erreur chargement: '+error.message); return; }
+  works = {};
+  (data||[]).forEach(row=>{ works[row.id] = {...row.data, _created: row.created_at}; });
+  renderList();
+  console.log('Works loaded:', Object.keys(works).length);
+}
+
+function renderList() {
+  const q = (document.getElementById('search-input').value||'').toLowerCase();
+  const ids = Object.keys(works).filter(id=>{
+    const w = works[id];
+    return !q || (w.titre||'').toLowerCase().includes(q) || (w.commune||'').toLowerCase().includes(q);
+  });
+  const el = document.getElementById('works-list');
+  document.getElementById('count-label').textContent = ids.length+' dossier'+(ids.length!==1?'s':'');
+  if (!ids.length) { el.innerHTML='<div style="padding:12px;color:var(--text-muted);font-size:12px">Aucun dossier</div>'; return; }
+  el.innerHTML = ids.map(id=>{
+    const w = works[id];
+    const thumb = (w.photos&&w.photos.length) ? `<img src="${w.photos[0].url||w.photos[0].data}" loading="lazy">` : '🏛';
+    return `<div class="work-item${id===currentId?' active':''}" onclick="selectWork('${id}')">
+      <div class="work-thumb">${thumb}</div>
+      <div class="work-info">
+        <div class="work-name">${w.titre||'Sans titre'}</div>
+        <div class="work-meta">${w.commune||w.type||'—'}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function selectWork(id) {
+  currentId = id;
+  renderList();
+  fillForm(works[id]);
+  document.getElementById('empty-state').classList.add('panel-hidden');
+  document.getElementById('main-nav').style.display='flex';
+  document.getElementById('tab-identification').classList.remove('panel-hidden');
+  // make sure only identification tab is active
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelector('[data-tab="identification"]').classList.add('active');
+  ['description','stratigraphie','etat','recommandations','photos'].forEach(t=>document.getElementById('tab-'+t).classList.add('panel-hidden'));
+}
+
+function fillForm(w) {
+  const fields = ['titre','ref','type','espace','adresse','commune','proprietaire','gestionnaire',
+    'periode','classement','historique','restaurateur','date','commanditaire','rapport',
+    'peinture-type','surface','support','datation','iconographie','description-tech',
+    'examens','analyses','campagnes','strati-obs',
+    'etat-general','stabilite','degrad-support','degrad-picturale','degrad-surface','causes','zones-risque',
+    'urgence','intervention-type','travaux-batiment','propositions','mise-en-valeur','budget','remarques'];
+  fields.forEach(f=>{
+    const el = document.getElementById('f-'+f);
+    if(el) el.value = w[f.replace('-','_')]||w[f]||'';
+  });
+  // Stratigraphie
+  renderStratiZones(w.stratigraphie||[]);
+  // Photos
+  renderPhotoSections(w.photos||[]);
+}
+
+/* ── SAVE ── */
+function autoSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveWork, 1000);
+  document.getElementById('statusbar').textContent = 'Modifications en cours…';
+}
+
+async function saveWork() {
+  if (!currentId) return;
+  const w = works[currentId];
+  const fields = {
+    titre:'f-titre', ref:'f-ref', type:'f-type', espace:'f-espace',
+    adresse:'f-adresse', commune:'f-commune', proprietaire:'f-proprietaire', gestionnaire:'f-gestionnaire',
+    periode:'f-periode', classement:'f-classement', historique:'f-historique',
+    restaurateur:'f-restaurateur', date:'f-date', commanditaire:'f-commanditaire', rapport:'f-rapport',
+    peinture_type:'f-peinture-type', surface:'f-surface', support:'f-support', datation:'f-datation',
+    iconographie:'f-iconographie', description_tech:'f-description-tech',
+    examens:'f-examens', analyses:'f-analyses', campagnes:'f-campagnes', strati_obs:'f-strati-obs',
+    etat_general:'f-etat-general', stabilite:'f-stabilite',
+    degrad_support:'f-degrad-support', degrad_picturale:'f-degrad-picturale',
+    degrad_surface:'f-degrad-surface', causes:'f-causes', zones_risque:'f-zones-risque',
+    urgence:'f-urgence', intervention_type:'f-intervention-type',
+    travaux_batiment:'f-travaux-batiment', propositions:'f-propositions',
+    mise_en_valeur:'f-mise-en-valeur', budget:'f-budget', remarques:'f-remarques'
+  };
+  const data = {...w};
+  Object.entries(fields).forEach(([k,id])=>{ const el=document.getElementById(id); if(el) data[k]=el.value; });
+  data.stratigraphie = getStratiZonesData();
+  works[currentId] = data;
+  const {error} = await sb.from(TABLE).upsert({id:currentId, data});
+  if (error) { document.getElementById('statusbar').textContent='Erreur: '+error.message; }
+  else { document.getElementById('statusbar').textContent='Sauvegardé ✓'; renderList(); }
+}
+
+/* ── NEW ── */
+function newBuilding() {
+  const id = crypto.randomUUID();
+  works[id] = {titre:'', photos:[], stratigraphie:[{titre:'Zone 1',couches:[],photos:[]}]};
+  currentId = id;
+  sb.from(TABLE).upsert({id, data:works[id]});
+  renderList();
+  fillForm(works[id]);
+  document.getElementById('empty-state').classList.add('panel-hidden');
+  document.getElementById('main-nav').style.display='flex';
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelector('[data-tab="identification"]').classList.add('active');
+  ['description','stratigraphie','etat','recommandations','photos'].forEach(t=>document.getElementById('tab-'+t).classList.add('panel-hidden'));
+  document.getElementById('tab-identification').classList.remove('panel-hidden');
+  document.getElementById('f-titre').focus();
+}
+
+/* ── TABS ── */
+function switchTab(el) {
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  const tab = el.dataset.tab;
+  ['identification','description','stratigraphie','etat','recommandations','photos'].forEach(t=>{
+    document.getElementById('tab-'+t).classList.toggle('panel-hidden', t!==tab);
+  });
+}
+
+/* ── STRATIGRAPHIE MULTI-ZONES ── */
+function renderStratiZones(zones) {
+  const container = document.getElementById('strati-zones-container');
+  container.innerHTML = '';
+  if(!zones||!zones.length){ addStratiZone({titre:'Zone 1',couches:[],photos:[]}); return; }
+  zones.forEach((z,i)=>renderStratiZoneEl(z,i));
+}
+
+function renderStratiZoneEl(zone,idx) {
+  const container = document.getElementById('strati-zones-container');
+  const zid = 'sz_'+idx;
+  const div = document.createElement('div');
+  div.className='strati-zone'; div.dataset.zidx=idx;
+  div.innerHTML=`
+    <div class="strati-zone-header">
+      <div class="strati-zone-num">${idx+1}</div>
+      <div class="strati-zone-title"><input value="${zone.titre||('Zone '+(idx+1))}" placeholder="Nom de la zone (ex: Voûte nord, Pilier est…)" oninput="autoSave()"/></div>
+      <button style="background:none;border:none;color:var(--ocre-text);cursor:pointer;font-size:13px;opacity:0.6;padding:4px" onclick="removeStratiZone(${idx})" title="Supprimer cette zone">🗑</button>
+    </div>
+    <div style="padding:8px 16px;background:var(--surface-1);border-bottom:1px solid var(--border)">
+      <input class="strati-zone-loc" value="${zone.emplacement||''}" placeholder="Emplacement (ex: mur nord, voûte, pilier central…)" oninput="autoSave()" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:13px;background:var(--surface-2);color:var(--text)"/>
+    </div>
+    <div class="strati-zone-body">
+      <div style="overflow-x:auto">
+      <table class="strati-table" style="min-width:700px">
+        <thead><tr>
+          <th style="width:36px">N°</th>
+          <th style="width:28px"></th>
+          <th>Description de la couche</th>
+          <th style="width:100px">Couleur</th>
+          <th style="width:90px">Liant</th>
+          <th style="width:110px">Pigments</th>
+          <th style="width:80px">NCS</th>
+          <th style="width:75px">Datation</th>
+          <th style="width:30px"></th>
+        </tr></thead>
+        <tbody id="strati-tbody-${idx}"></tbody>
+      </table>
+      </div>
+      <button class="btn-strati-add" onclick="addStratiRowToZone(${idx})">+ Ajouter une couche</button>
+      <div class="strati-zone-photos">
+        <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px">Photos de cette zone</div>
+        <div class="strati-photo-grid" id="strati-pg-${idx}"></div>
+      </div>
+    </div>`;
+  container.appendChild(div);
+  // Fill rows
+  (zone.couches||[]).forEach((r,ri)=>addStratiRowToZone(idx,r,ri+1));
+  // Fill photos
+  renderStratiZonePhotos(idx, zone.photos||[]);
+}
+
+function addStratiZone(data=null) {
+  const zones = getStratiZonesData();
+  const newZone = data || {titre:'Zone '+(zones.length+1), couches:[], photos:[]};
+  zones.push(newZone);
+  saveStratiZones(zones);
+  renderStratiZones(zones);
+  autoSave();
+}
+
+function removeStratiZone(idx) {
+  if(!confirm('Supprimer cette zone ?')) return;
+  const zones = getStratiZonesData();
+  zones.splice(idx,1);
+  saveStratiZones(zones);
+  renderStratiZones(zones);
+  autoSave();
+}
+
+function addStratiRowToZone(idx, data={}, num=null) {
+  const tbody = document.getElementById('strati-tbody-'+idx);
+  if(!tbody) return;
+  const n = num||tbody.rows.length+1;
+  const tr = document.createElement('tr');
+  tr.draggable = true;
+  tr.innerHTML=`<td style="text-align:center;font-weight:600;color:var(--ocre);min-width:30px" class="strati-row-num">${n}</td>
+    <td style="text-align:center;cursor:grab;color:var(--text-muted);font-size:15px;user-select:none" class="drag-handle" title="Glisser pour réordonner">⠿</td>
+    <td><input value="${(data.description||'').replace(/"/g,'&quot;')}" oninput="autoSave()" placeholder="ex: Badigeon blanc…"/></td>
+    <td><input value="${(data.couleur||'').replace(/"/g,'&quot;')}" oninput="autoSave()" placeholder="ex: Blanc crème"/></td>
+    <td><input value="${(data.liant||'').replace(/"/g,'&quot;')}" oninput="autoSave()" placeholder="ex: Chaux…"/></td>
+    <td><input value="${(data.pigments||'').replace(/"/g,'&quot;')}" oninput="autoSave()" placeholder="ex: Blanc de plomb…"/></td>
+    <td><input value="${(data.ncs||'').replace(/"/g,'&quot;')}" oninput="autoSave()" placeholder="ex: S 1050-Y10R"/></td>
+    <td><input value="${(data.datation||'').replace(/"/g,'&quot;')}" oninput="autoSave()" placeholder="ex: XVIIIe"/></td>
+    <td><button style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:13px" onclick="this.closest('tr').remove();renumberStratiRows(${idx});autoSave()">✕</button></td>`;
+  tbody.appendChild(tr);
+  initStratiRowDrag(tr, idx);
+}
+
+function renumberStratiRows(idx) {
+  const tbody = document.getElementById('strati-tbody-'+idx);
+  if(!tbody) return;
+  [...tbody.rows].forEach((tr,i)=>{
+    const numCell = tr.querySelector('.strati-row-num');
+    if(numCell) numCell.textContent = i+1;
+  });
+}
+
+function initStratiRowDrag(tr, idx) {
+  tr.addEventListener('dragstart', e=>{
+    e.dataTransfer.effectAllowed='move';
+    tr.classList.add('dragging');
+    tr._dragIdx = [...tr.parentNode.rows].indexOf(tr);
+  });
+  tr.addEventListener('dragend', ()=>{
+    tr.classList.remove('dragging');
+    document.querySelectorAll('.strati-tbody-'+idx+' tr').forEach(r=>r.classList.remove('drag-over'));
+    renumberStratiRows(idx);
+    autoSave();
+  });
+  tr.addEventListener('dragover', e=>{
+    e.preventDefault();
+    e.dataTransfer.dropEffect='move';
+    const tbody = tr.parentNode;
+    [...tbody.rows].forEach(r=>r.classList.remove('drag-over'));
+    tr.classList.add('drag-over');
+  });
+  tr.addEventListener('drop', e=>{
+    e.preventDefault();
+    const tbody = tr.parentNode;
+    const dragging = tbody.querySelector('.dragging');
+    if(dragging && dragging!==tr) {
+      const rows=[...tbody.rows];
+      const fromIdx=rows.indexOf(dragging);
+      const toIdx=rows.indexOf(tr);
+      if(fromIdx<toIdx) tbody.insertBefore(dragging,tr.nextSibling);
+      else tbody.insertBefore(dragging,tr);
+    }
+    [...tbody.rows].forEach(r=>r.classList.remove('drag-over'));
+    renumberStratiRows(idx);
+    autoSave();
+  });
+}
+
+const STRATI_CATEGORIE_LABELS = {
+  generale:'Vue générale', coupes:'Coupe strati', uv:'UV', lumiere_rasante:'Lumière rasante',
+  ir:'Infrarouge', macro:'Macro', prelevement:'Prélèvement', autre:'Autre'
+};
+
+function renderStratiZonePhotos(idx, photos) {
+  const grid = document.getElementById('strati-pg-'+idx);
+  if(!grid) return;
+  const catLabel = c => STRATI_CATEGORIE_LABELS[c]||c||'';
+  grid.innerHTML = (photos||[]).map((p,pi)=>{
+    const src = p.url||p.data||'';
+    const cat = catLabel(p.categorie);
+    const leg = p.legende||'';
+    const label = [cat,leg].filter(Boolean).join(' – ');
+    return `<div class="strati-photo-item">
+      <img src="${src}" onclick="openStratiLightbox('${src}','${label.replace(/'/g,"&#39;")}');event.stopPropagation()" style="cursor:zoom-in">
+      <div class="strati-photo-overlay">
+        <div class="strati-photo-actions">
+          <button class="strati-photo-action-btn" title="Agrandir" onclick="openStratiLightbox('${src}','${label.replace(/'/g,"&#39;")}');event.stopPropagation()">🔍</button>
+          <button class="strati-photo-action-btn" title="Modifier" onclick="editStratiPhoto(${idx},${pi});event.stopPropagation()">✏️</button>
+          <button class="strati-photo-action-btn" title="Supprimer" onclick="deleteStratiPhoto(${idx},${pi});event.stopPropagation()">🗑️</button>
+        </div>
+        ${label ? `<div class="strati-photo-label-bar">${label}</div>` : '<div></div>'}
+      </div>
+    </div>`;
+  }).join('') +
+  `<div class="strati-photo-add" onclick="addStratiPhoto(${idx})">
+    <div class="strati-photo-add-icon">＋</div><div>Ajouter une photo</div>
+  </div>`;
+}
+
+/* ── Pending strati photo upload ── */
+let _spmZoneIdx = null, _spmFile = null, _spmEditPhotoIdx = null;
+
+function addStratiPhoto(idx) {
+  _spmEditPhotoIdx = null;
+  const inp = document.createElement('input');
+  inp.type='file'; inp.accept='image/*';
+  inp.onchange = e => {
+    const file = e.target.files[0];
+    if(!file) return;
+    _spmZoneIdx = idx;
+    _spmFile = file;
+    document.getElementById('spm-categorie').value = 'generale';
+    document.getElementById('spm-legende').value = '';
+    document.getElementById('strati-photo-modal').style.display = 'flex';
+  };
+  inp.click();
+}
+
+function editStratiPhoto(zoneIdx, photoIdx) {
+  const zones = getStratiZonesData();
+  const p = zones[zoneIdx]&&zones[zoneIdx].photos&&zones[zoneIdx].photos[photoIdx];
+  if(!p) return;
+  _spmZoneIdx = zoneIdx;
+  _spmFile = null;
+  _spmEditPhotoIdx = photoIdx;
+  document.getElementById('spm-categorie').value = p.categorie||'generale';
+  document.getElementById('spm-legende').value = p.legende||'';
+  document.getElementById('strati-photo-modal').style.display = 'flex';
+}
+
+function cancelStratiPhotoModal() {
+  _spmFile = null; _spmZoneIdx = null; _spmEditPhotoIdx = null;
+  document.getElementById('strati-photo-modal').style.display = 'none';
+}
+
+async function confirmStratiPhotoModal() {
+  const cat = document.getElementById('spm-categorie').value;
+  const leg = document.getElementById('spm-legende').value;
+  document.getElementById('strati-photo-modal').style.display = 'none';
+  const idx = _spmZoneIdx;
+
+  // Edit mode: just update metadata
+  if(_spmEditPhotoIdx !== null) {
+    const zones = getStratiZonesData();
+    if(zones[idx]&&zones[idx].photos&&zones[idx].photos[_spmEditPhotoIdx]) {
+      zones[idx].photos[_spmEditPhotoIdx].categorie = cat;
+      zones[idx].photos[_spmEditPhotoIdx].legende = leg;
+      saveStratiZones(zones);
+      renderStratiZonePhotos(idx, zones[idx].photos);
+      await saveWork();
+    }
+    _spmFile=null; _spmZoneIdx=null; _spmEditPhotoIdx=null;
+    return;
+  }
+
+  // Upload mode
+  if(!_spmFile||!currentId) return;
+  showToast('Envoi en cours…');
+  const photoId = Date.now()+'_'+Math.random().toString(36).slice(2,8);
+  const ext = _spmFile.name.split('.').pop()||'jpg';
+  const path = `${currentId}/strati_${photoId}.${ext}`;
+  const dims = await getImageDims(_spmFile);
+  const {error:upErr} = await sb.storage.from(BUCKET).upload(path, _spmFile, {contentType:_spmFile.type||'image/jpeg'});
+  if(upErr){showToast('Erreur: '+upErr.message); return;}
+  const {data:urlData} = sb.storage.from(BUCKET).getPublicUrl(path);
+  const zones = getStratiZonesData();
+  if(!zones[idx]) return;
+  zones[idx].photos = zones[idx].photos||[];
+  zones[idx].photos.push({id:photoId,url:urlData.publicUrl,path,categorie:cat,legende:leg,w:dims.w,h:dims.h});
+  saveStratiZones(zones);
+  renderStratiZonePhotos(idx, zones[idx].photos);
+  await saveWork();
+  showToast('Photo ajoutée ✓');
+  _spmFile=null; _spmZoneIdx=null;
+}
+
+async function deleteStratiPhoto(idx,pi) {
+  if(!confirm('Supprimer cette photo ?')) return;
+  const zones=getStratiZonesData();
+  if(!zones[idx]||!zones[idx].photos) return;
+  const photo=zones[idx].photos[pi];
+  if(photo&&photo.path) await sb.storage.from(BUCKET).remove([photo.path]);
+  zones[idx].photos.splice(pi,1);
+  saveStratiZones(zones);
+  renderStratiZonePhotos(idx,zones[idx].photos);
+  await saveWork();
+  showToast('Photo supprimée');
+}
+
+function openStratiLightbox(src, caption) {
+  const lb = document.getElementById('lightbox');
+  document.getElementById('lb-img').src = src;
+  const capEl = document.getElementById('lb-caption');
+  if(capEl){ capEl.textContent = caption||''; capEl.style.display = caption ? 'block' : 'none'; }
+  lb.style.display = 'flex';
+}
+
+function saveStratiZones(zones) {
+  if(!currentId) return;
+  works[currentId] = {...(works[currentId]||{}), stratigraphie: zones};
+}
+
+
+function getStratiZonesData() {
+  const saved = (works[currentId]||{}).stratigraphie||[];
+  const zones = [];
+  document.querySelectorAll('.strati-zone').forEach((div,idx)=>{
+    const titleInput = div.querySelector('.strati-zone-title input');
+    const titre = titleInput ? titleInput.value : (saved[idx]?.titre||('Zone '+(idx+1)));
+    const locInput = div.querySelector('.strati-zone-loc');
+    const emplacement = locInput ? locInput.value : (saved[idx]?.emplacement||'');
+    const couches = [];
+    div.querySelectorAll('tbody tr').forEach(tr=>{
+      const inputs=tr.querySelectorAll('input');
+      couches.push({description:inputs[0]?.value||'',couleur:inputs[1]?.value||'',liant:inputs[2]?.value||'',pigments:inputs[3]?.value||'',ncs:inputs[4]?.value||'',datation:inputs[5]?.value||''});
+    });
+    const photos = saved[idx]?.photos||[];
+    zones.push({titre,emplacement,couches,photos});
+  });
+  return zones;
+}
+
+/* ── PHOTOS ── */
+const photoCats = [
+  {key:'generale',label:'Vues générales'},
+  {key:'localisation',label:'Localisation / Vue d\'ensemble'},
+  {key:'lumiere_rasante',label:'Lumière rasante'},
+  {key:'uv',label:'Fluorescence UV'},
+  {key:'ir',label:'Infrarouge'},
+  {key:'detail',label:'Détail / Macro'},
+  {key:'degradation',label:'Dégradations'},
+  {key:'prelevement',label:'Emplacements prélèvements'},
+  {key:'apres',label:'Après intervention'},
+  {key:'autre',label:'Autres'}
+];
+
+function renderPhotoSections(photos) {
+  const container = document.getElementById('photo-sections');
+  container.innerHTML = '';
+  photoCats.forEach(cat=>{
+    const catPhotos = photos.filter(p=>p.categorie===cat.key);
+    const div = document.createElement('div');
+    div.className = 'card';
+    div.innerHTML = `<div class="card-title">📷 ${cat.label} <span style="color:var(--text-muted);font-weight:400;font-size:12px">(${catPhotos.length})</span></div>
+      <div class="photo-grid" id="pg-${cat.key}">
+        ${catPhotos.map(p=>`<div class="photo-card">
+          <img src="${p.url||p.data}" loading="lazy" onclick="openLightbox('${p.url||p.data}','${(p.legende||'').replace(/'/g,"&#39;")}')" style="cursor:zoom-in">
+          <div class="photo-overlay"><div class="photo-label">${p.legende||catLabels[p.categorie]||''}</div></div>
+          <button class="photo-delete" onclick="deletePhoto('${p.id}')">✕</button>
+        </div>`).join('')}
+        <div class="photo-add" onclick="triggerAddPhoto('${cat.key}')">
+          <div class="photo-add-icon">+</div>
+          <div>Ajouter</div>
+        </div>
+      </div>`;
+    container.appendChild(div);
+  });
+}
+
+let pendingCategorie = null;
+function triggerAddPhoto(cat) {
+  pendingCategorie = cat;
+  const inp = document.createElement('input');
+  inp.type='file'; inp.accept='image/*'; inp.multiple=true;
+  inp.onchange = e=>{ [...e.target.files].forEach(f=>startPhotoUpload(f, cat)); };
+  inp.click();
+}
+
+function startPhotoUpload(file, cat) {
+  pendingPhotoBlob = file;
+  pendingPhotoBlobName = file.name;
+  document.getElementById('modal-categorie').value = cat;
+  document.getElementById('modal-legende').value = '';
+  document.getElementById('photo-label-modal').style.display = 'flex';
+}
+function cancelPhotoLabel() {
+  pendingPhotoBlob=null; pendingPhotoBlobName=null;
+  document.getElementById('photo-label-modal').style.display='none';
+}
+async function confirmPhotoLabel() {
+  if (!pendingPhotoBlob||!currentId) return;
+  document.getElementById('photo-label-modal').style.display='none';
+  showToast('Envoi en cours…');
+  const cat = document.getElementById('modal-categorie').value;
+  const leg = document.getElementById('modal-legende').value;
+  const photoId = Date.now()+'_'+Math.random().toString(36).slice(2,10);
+  const ext = pendingPhotoBlobName.split('.').pop()||'jpg';
+  const path = `${currentId}/${photoId}.${ext}`;
+
+  // Get image dimensions
+  const dims = await getImageDims(pendingPhotoBlob);
+
+  const {error:upErr} = await sb.storage.from(BUCKET).upload(path, pendingPhotoBlob, {contentType:pendingPhotoBlob.type||'image/jpeg'});
+  if (upErr) { showToast('Erreur upload: '+upErr.message); return; }
+  const {data:urlData} = sb.storage.from(BUCKET).getPublicUrl(path);
+  const url = urlData.publicUrl;
+
+  const w = works[currentId];
+  const photos = w.photos||[];
+  photos.push({id:photoId, url, path, name:pendingPhotoBlobName, categorie:cat, legende:leg, date:new Date().toISOString().slice(0,10), w:dims.w, h:dims.h});
+  works[currentId] = {...w, photos};
+  await sb.from(TABLE).upsert({id:currentId, data:works[currentId]});
+  showToast('Photo ajoutée ✓');
+  renderPhotoSections(works[currentId].photos||[]);
+  pendingPhotoBlob=null; pendingPhotoBlobName=null;
+}
+function getImageDims(file) {
+  return new Promise(resolve=>{
+    const img=new Image(), url=URL.createObjectURL(file);
+    img.onload=()=>{ resolve({w:img.naturalWidth,h:img.naturalHeight}); URL.revokeObjectURL(url); };
+    img.onerror=()=>resolve({w:0,h:0});
+    img.src=url;
+  });
+}
+async function deletePhoto(photoId) {
+  if (!currentId) return;
+  const w = works[currentId];
+  const photo = (w.photos||[]).find(p=>p.id==photoId);
+  if (!photo) return;
+  if (!confirm('Supprimer cette photo ?')) return;
+  if (photo.path) await sb.storage.from(BUCKET).remove([photo.path]);
+  works[currentId] = {...w, photos:(w.photos||[]).filter(p=>p.id!=photoId)};
+  await sb.from(TABLE).upsert({id:currentId, data:works[currentId]});
+  showToast('Photo supprimée');
+  renderPhotoSections(works[currentId].photos||[]);
+}
+
+/* ── LIGHTBOX ── */
+function openLightbox(src, caption) {
+  document.getElementById('lb-img').src = src;
+  const capEl = document.getElementById('lb-caption');
+  if(capEl){ capEl.textContent = caption||''; capEl.style.display = caption ? 'block' : 'none'; }
+  document.getElementById('lightbox').style.display = 'flex';
+}
+function closeLightbox(e) {
+  if(e.target===document.getElementById('lightbox')) document.getElementById('lightbox').style.display='none';
+}
+
+/* ── LIEN CLIENT ── */
+function copyClientLink() {
+  if (!currentId) { showToast('Sélectionnez un dossier'); return; }
+  const url = APP_URL+'client.html?id='+currentId;
+  navigator.clipboard.writeText(url).then(()=>showToast('Lien copié ✓'));
+}
+
+/* ── TOAST ── */
+function showToast(msg) {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+/* ── EXPORT PDF ── */
+async function exportPDF() {
+  if (!currentId) { showToast('Sélectionnez un dossier'); return; }
+  showToast('Chargement des photos…');
+  const wk = works[currentId];
+
+  function resizeToJpeg(img) {
+    const MAX=1000; let w=img.naturalWidth,h=img.naturalHeight;
+    if(w>MAX||h>MAX){ if(w>h){h=Math.round(h*MAX/w);w=MAX;}else{w=Math.round(w*MAX/h);h=MAX;} }
+    const c=document.createElement('canvas'); c.width=w; c.height=h;
+    c.getContext('2d').drawImage(img,0,0,w,h);
+    return {data:c.toDataURL('image/jpeg',0.75),w,h};
+  }
+  async function toBase64(photo) {
+    if(!photo.url) return photo;
+    return new Promise(resolve=>{
+      const xhr=new XMLHttpRequest(); xhr.open('GET',photo.url,true); xhr.responseType='arraybuffer';
+      xhr.onload=()=>{
+        if(xhr.status!==200){resolve(photo);return;}
+        const bytes=new Uint8Array(xhr.response); let binary='';
+        const chunk=8192;
+        for(let i=0;i<bytes.byteLength;i+=chunk) binary+=String.fromCharCode.apply(null,bytes.subarray(i,i+chunk));
+        const b64src='data:image/jpeg;base64,'+btoa(binary);
+        const img=new Image();
+        img.onload=()=>{const r=resizeToJpeg(img);resolve({...photo,...r});};
+        img.onerror=()=>resolve({...photo,data:b64src});
+        img.src=b64src;
+      };
+      xhr.onerror=()=>resolve(photo); xhr.send();
+    });
+  }
+
+  const allPhotos = wk.photos||[];
+  const loadedPhotos = await Promise.all(allPhotos.map(toBase64));
+  // Load strati zone photos too
+  const stratiZonesLoaded = await Promise.all((wk.stratigraphie||[]).map(async zone=>{
+    const zPhotos = await Promise.all((zone.photos||[]).map(toBase64));
+    return {...zone, photos:zPhotos};
+  }));
+  const wkPDF = {...wk, photos:loadedPhotos, stratigraphie:stratiZonesLoaded};
+
+  showToast('Génération du PDF…');
+  const {jsPDF} = window.jspdf;
+  const doc = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const W=210,H=297,M=18,CW=W-M*2;
+  let y=M;
+  const ocre=[124,79,30], darkText=[20,20,18], mutedText=[100,100,94];
+
+  const checkPage=(need=12)=>{ if(y+need>H-M){doc.addPage();y=M;} };
+  const rule=()=>{ doc.setDrawColor(220,210,190);doc.setLineWidth(0.2);doc.line(M,y,M+CW,y);y+=4; };
+  const heading=(text,size=10,color=darkText)=>{ checkPage(10);doc.setFontSize(size);doc.setTextColor(...color);doc.setFont('helvetica','bold');doc.text(text,M,y);y+=size*0.4+3; };
+  const body=(text,size=9,color=darkText)=>{ if(!text)return;doc.setFontSize(size);doc.setTextColor(...color);doc.setFont('helvetica','normal');doc.splitTextToSize(String(text),CW).forEach(l=>{checkPage();doc.text(l,M,y);y+=size*0.38+1.5;}); };
+  const fieldRow=(label,value)=>{
+    if(!value||!String(value).trim())return;
+    checkPage(7);
+    doc.setFontSize(8);doc.setTextColor(...mutedText);doc.setFont('helvetica','bold');
+    doc.text(label.toUpperCase(),M,y);
+    doc.setFontSize(9);doc.setTextColor(...darkText);doc.setFont('helvetica','normal');
+    const lines=doc.splitTextToSize(String(value),CW-44);
+    lines.forEach((l,li)=>{ if(li>0)checkPage(5); doc.text(l,M+44,y); y+=4.5; });
+    y+=1;
+  };
+  const sectionBar=(title)=>{ checkPage(16);y+=4;doc.setFillColor(...ocre);doc.rect(M,y,CW,7,'F');doc.setFontSize(9.5);doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.text(title,M+3,y+5);y+=11; };
+  const insertPhotos=(photoList,max=50)=>{
+    if(!photoList||!photoList.length)return;
+    const limited=photoList.slice(0,max);
+    const cols=3,thumbW=(CW-10)/3,gap=5;
+    let rowMaxH=0;
+    for(let i=0;i<limited.length;i++){
+      const col=i%cols; const p=limited[i];
+      const ratio=(p.h&&p.w)?p.h/p.w:0.75; const th=thumbW*ratio;
+      if(col===0){rowMaxH=th;checkPage(th+14);}else if(th>rowMaxH){rowMaxH=th;}
+      const px=M+col*(thumbW+gap);
+      const imgSrc=p.data||p.url;
+      if(imgSrc){try{doc.addImage(imgSrc,'JPEG',px,y,thumbW,th,undefined,'FAST');}catch(e){}}
+      doc.setFontSize(6.5);doc.setTextColor(...mutedText);doc.setFont('helvetica','normal');
+      doc.text((catLabels[p.categorie]||p.categorie||'')+(p.legende?' — '+p.legende:''),px,y+th+3.5,{maxWidth:thumbW});
+      if(col===cols-1||i===limited.length-1){y+=rowMaxH+10;}
+    }
+    y+=2;
+  };
+
+  // EN-TÊTE
+  doc.setFillColor(...ocre);doc.rect(0,0,W,52,'F');
+  // Logo (fond noir)
+  doc.setFillColor(0,0,0);doc.roundedRect(M,4,20,20,2,2,'F');
+  doc.addImage('data:image/png;base64,'+LOGO_B64,'PNG',M+1,5,18,18);
+  doc.setFontSize(20);doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.text('ARTBEE',M+24,16);
+  doc.setFontSize(9);doc.setFont('helvetica','normal');doc.setTextColor(240,220,190);doc.text('Polychromies · Études préalables · Peintures murales',M,22);
+  doc.setDrawColor(255,255,255);doc.setLineWidth(0.3);doc.line(M,28,W-M,28);
+  doc.setFontSize(13);doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.text('ÉTUDE PRÉALABLE',M,38);
+  doc.setFontSize(8);doc.setFont('helvetica','normal');doc.setTextColor(240,220,190);
+  doc.text('Généré le '+new Date().toLocaleDateString('fr-FR'),M,45);
+  if(wk.restaurateur) doc.text('Expert : '+wk.restaurateur,W-M,45,{align:'right'});
+  y=62;
+
+  // 1. IDENTIFICATION
+  sectionBar('1. IDENTIFICATION DU BÂTIMENT / ESPACE');
+  fieldRow('Intitulé',wk.titre);
+  fieldRow('Référence',wk.ref);
+  fieldRow('Type de bâtiment',wk.type);
+  fieldRow('Espace / Localisation',wk.espace);
+  fieldRow('Adresse',wk.adresse+(wk.commune?' — '+wk.commune:''));
+  fieldRow('Propriétaire',wk.proprietaire);
+  fieldRow('Gestionnaire',wk.gestionnaire);
+  fieldRow('Période de construction',wk.periode);
+  fieldRow('Classement / Protection',wk.classement);
+  fieldRow('Date de l\'étude',wk.date);
+  fieldRow('Restaurateur / Expert',wk.restaurateur);
+  fieldRow('Commanditaire',wk.commanditaire);
+  if(wk.historique){y+=2;body(wk.historique,9);}
+
+  // PHOTOS GÉNÉRALES
+  const photosGen = wkPDF.photos.filter(p=>p.categorie==='generale'||p.categorie==='localisation');
+  if(photosGen.length){sectionBar('DOCUMENTATION GÉNÉRALE');insertPhotos(photosGen);}
+
+  // 2. DESCRIPTION
+  sectionBar('2. DESCRIPTION DES PEINTURES / POLYCHROMIES');
+  fieldRow('Type de peinture',wk.peinture_type);
+  fieldRow('Surface approximative',wk.surface);
+  fieldRow('Support',wk.support);
+  fieldRow('Datation estimée',wk.datation);
+  if(wk.iconographie){y+=2;heading('Iconographie / Thème',9.5);body(wk.iconographie,9);}
+  if(wk.description_tech){y+=2;heading('Description technique',9.5);body(wk.description_tech,9);}
+  if(wk.examens){y+=2;heading('Examens effectués',9.5);body(wk.examens,9);}
+  if(wk.analyses){y+=2;heading('Analyses de laboratoire',9.5);body(wk.analyses,9);}
+  if(wk.campagnes){y+=2;heading('Campagnes de peinture',9.5);body(wk.campagnes,9);}
+
+  // PHOTOS EXAMENS
+  const photosUV = wkPDF.photos.filter(p=>['lumiere_rasante','uv','ir'].includes(p.categorie));
+  if(photosUV.length){sectionBar('EXAMENS SOUS LUMIÈRES SPÉCIALES');insertPhotos(photosUV);}
+
+  // 3. STRATIGRAPHIE
+  const stratiZones = wkPDF.stratigraphie||[];
+  if(stratiZones.length){
+    sectionBar('3. STRATIGRAPHIE');
+    // cols total = 174mm (CW portrait A4 with M=18)
+  const cols2=[10,46,26,24,34,22,12];
+    const headers=['N°','Description','Couleur','Liant','Pigments','NCS','Dat.'];
+    stratiZones.forEach((zone,zi)=>{
+      // Zone header
+      checkPage(20);
+      doc.setFillColor(...ocre);doc.roundedRect(M,y,CW,7,2,2,'F');
+      doc.setFontSize(9);doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');
+      doc.text(`Zone ${zi+1}${zone.titre&&zone.titre!==('Zone '+(zi+1))?' — '+zone.titre:''}`,M+4,y+5);
+      y+=10;
+      if(zone.emplacement){
+        checkPage(6);
+        doc.setFontSize(8);doc.setTextColor(...mutedText);doc.setFont('helvetica','italic');
+        doc.text('Emplacement : '+zone.emplacement,M,y);y+=6;
+      }
+      // Table header
+      if(zone.couches&&zone.couches.length){
+        checkPage(10);
+        doc.setFillColor(245,234,216);doc.rect(M,y,CW,6,'F');
+        let cx=M;
+        headers.forEach((h,i)=>{doc.setFontSize(7.5);doc.setTextColor(90,54,16);doc.setFont('helvetica','bold');doc.text(h,cx+2,y+4.5);cx+=cols2[i];});
+        y+=6;
+        zone.couches.forEach((r,i)=>{
+          checkPage(7);
+          doc.setFillColor(i%2===0?255:250,245,238);doc.rect(M,y,CW,6.5,'F');
+          let cx2=M;
+          const vals=[String(i+1),r.description||'',r.couleur||'',r.liant||'',r.pigments||'',r.ncs||'',r.datation||''];
+          vals.forEach((v,j)=>{doc.setFontSize(7.5);doc.setTextColor(...darkText);doc.setFont('helvetica','normal');doc.text(doc.splitTextToSize(v,cols2[j]-3)[0]||'',cx2+2,y+4.5);cx2+=cols2[j];});
+          y+=6.5;
+        });
+        y+=3;
+      }
+      // Zone photos
+      const zPhotos = (zone.photos||[]).filter(p=>p.data||p.url);
+      if(zPhotos.length){
+        checkPage(20);
+        doc.setFontSize(8);doc.setTextColor(...mutedText);doc.setFont('helvetica','italic');
+        doc.text('Photos de la zone :',M,y);y+=5;
+        insertPhotos(zPhotos, 9);
+      }
+      y+=4;
+    });
+    if(wkPDF.strati_obs){body(wkPDF.strati_obs,9);}
+  }
+
+  // 4. ÉTAT DE CONSERVATION
+  sectionBar('4. ÉTAT DE CONSERVATION');
+  fieldRow('État général',wk.etat_general);
+  fieldRow('Stabilité structurelle',wk.stabilite);
+  if(wk.degrad_support){y+=2;heading('Dégradations du support',9.5);body(wk.degrad_support,9);}
+  if(wk.degrad_picturale){y+=2;heading('Dégradations de la couche picturale',9.5);body(wk.degrad_picturale,9);}
+  if(wk.degrad_surface){y+=2;heading('Dégradations de surface',9.5);body(wk.degrad_surface,9);}
+  if(wk.causes){y+=2;heading('Causes des dégradations',9.5);body(wk.causes,9);}
+  if(wk.zones_risque){y+=2;heading('Zones prioritaires',9.5);body(wk.zones_risque,9);}
+
+  // PHOTOS DÉGRADATIONS + DÉTAILS
+  const photosDetail = wkPDF.photos.filter(p=>['detail','degradation','prelevement'].includes(p.categorie));
+  if(photosDetail.length){sectionBar('DOCUMENTATION DES DÉGRADATIONS');insertPhotos(photosDetail);}
+
+  // 5. RECOMMANDATIONS
+  sectionBar('5. RECOMMANDATIONS ET PROPOSITIONS D\'INTERVENTION');
+  fieldRow('Urgence d\'intervention',wk.urgence);
+  fieldRow('Type d\'intervention',wk.intervention_type);
+  if(wk.travaux_batiment){y+=2;heading('Travaux préalables bâtiment',9.5);body(wk.travaux_batiment,9);}
+  if(wk.propositions){y+=2;heading('Propositions de traitement',9.5);body(wk.propositions,9);}
+  if(wk.mise_en_valeur){y+=2;heading('Mise en valeur',9.5);body(wk.mise_en_valeur,9);}
+  if(wk.budget){y+=2;heading('Estimation budgétaire',9.5);body(wk.budget,9);}
+  if(wk.remarques){y+=2;heading('Remarques complémentaires',9.5);body(wk.remarques,9);}
+
+  // PHOTOS APRÈS
+  const photosApres = wkPDF.photos.filter(p=>p.categorie==='apres'||p.categorie==='autre');
+  if(photosApres.length){sectionBar('AUTRES DOCUMENTS PHOTOGRAPHIQUES');insertPhotos(photosApres);}
+
+  // FOOTER sur chaque page
+  const totalPages = doc.getNumberOfPages();
+  for(let i=1;i<=totalPages;i++){
+    doc.setPage(i);
+    doc.setFillColor(248,245,240);doc.rect(0,H-14,W,14,'F');
+    doc.setFontSize(7.5);doc.setTextColor(...mutedText);doc.setFont('helvetica','normal');
+    doc.addImage('data:image/png;base64,'+LOGO_B64,'PNG',M,H-11,6,6);
+    doc.text('ARTBEE Polychromies — Étude préalable',M+8,H-6);
+    if(wk.ref) doc.text('Réf. '+wk.ref,W/2,H-6,{align:'center'});
+    doc.text('Page '+i+' / '+totalPages,W-M,H-6,{align:'right'});
+  }
+
+  const safeName = (wk.titre||'Etude').replace(/[^a-zA-Z0-9_\- ]/g,'_');
+  doc.save('Etude_'+safeName+'_'+new Date().toISOString().slice(0,10)+'.pdf');
+  showToast('PDF exporté !');
+}
+
+  // Chargement du logo
+  window.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.logo-mark img, .login-logo img').forEach(function(img) {
+      img.src = 'data:image/png;base64,' + LOGO_B64;
+    });
+  });
+</script>
+</body>
+</html>
