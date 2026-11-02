@@ -1205,7 +1205,7 @@ async function exportPDF() {
   if(stratiZones.length){
     sectionBar('3. STRATIGRAPHIE');
     // cols total = 174mm (CW portrait A4 with M=18)
-  const cols2=[10,46,26,24,34,22,12];
+  const cols2=[10,38,30,24,34,26,12];
     const headers=['N°','Description','Couleur','Liant','Pigments','NCS','Dat.'];
     stratiZones.forEach((zone,zi)=>{
       // Zone header
@@ -1227,12 +1227,21 @@ async function exportPDF() {
         headers.forEach((h,i)=>{doc.setFontSize(7.5);doc.setTextColor(90,54,16);doc.setFont('helvetica','bold');doc.text(h,cx+2,y+4.5);cx+=cols2[i];});
         y+=6;
         zone.couches.forEach((r,i)=>{
-          checkPage(7);
-          doc.setFillColor(i%2===0?255:250,245,238);doc.rect(M,y,CW,6.5,'F');
-          let cx2=M;
           const vals=[String(i+1),r.description||'',r.couleur||'',r.liant||'',r.pigments||'',r.ncs||'',r.datation||''];
-          vals.forEach((v,j)=>{doc.setFontSize(7.5);doc.setTextColor(...darkText);doc.setFont('helvetica','normal');doc.text(doc.splitTextToSize(v,cols2[j]-3)[0]||'',cx2+2,y+4.5);cx2+=cols2[j];});
-          y+=6.5;
+          // Calculate row height based on max lines needed
+          const lineH=4.2;
+          const splitVals=vals.map((v,j)=>doc.splitTextToSize(v,cols2[j]-3));
+          const maxLines=Math.max(...splitVals.map(s=>s.length));
+          const rowH=Math.max(6.5, maxLines*lineH+3);
+          checkPage(rowH+2);
+          doc.setFillColor(i%2===0?255:250,245,238);doc.rect(M,y,CW,rowH,'F');
+          let cx2=M;
+          splitVals.forEach((lines,j)=>{
+            doc.setFontSize(7.5);doc.setTextColor(...darkText);doc.setFont('helvetica','normal');
+            lines.forEach((line,li)=>{doc.text(line,cx2+2,y+4.5+li*lineH);});
+            cx2+=cols2[j];
+          });
+          y+=rowH;
         });
         y+=3;
       }
