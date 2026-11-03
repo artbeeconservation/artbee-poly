@@ -690,6 +690,10 @@ function renderStratiZoneEl(zone,idx) {
       </table>
       </div>
       <button class="btn-strati-add" onclick="addStratiRowToZone(${idx})">+ Ajouter une couche</button>
+      <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
+        <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px">Remarques</div>
+        <textarea class="strati-zone-remarques" oninput="autoSave()" placeholder="Observations, interprétations, notes complémentaires sur cette zone…" style="width:100%;min-height:72px;border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:13px;background:var(--surface-2);color:var(--text-primary);resize:vertical;line-height:1.5">${(zone.remarques||'').replace(/</g,'&lt;')}</textarea>
+      </div>
       <div class="strati-zone-photos">
         <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px">Photos de cette zone</div>
         <div class="strati-photo-grid" id="strati-pg-${idx}"></div>
@@ -933,7 +937,9 @@ function getStratiZonesData() {
       couches.push({description:inputs[0]?.value||'',couleur:inputs[1]?.value||'',liant:inputs[2]?.value||'',pigments:inputs[3]?.value||'',ncs:inputs[4]?.value||'',datation:inputs[5]?.value||''});
     });
     const photos = saved[idx]?.photos||[];
-    zones.push({titre,emplacement,couches,photos});
+    const remarquesEl = div.querySelector('.strati-zone-remarques');
+    const remarques = remarquesEl ? remarquesEl.value : (saved[idx]?.remarques||'');
+    zones.push({titre,emplacement,couches,photos,remarques});
   });
   return zones;
 }
@@ -1252,6 +1258,17 @@ async function exportPDF() {
         doc.setFontSize(8);doc.setTextColor(...mutedText);doc.setFont('helvetica','italic');
         doc.text('Photos de la zone :',M,y);y+=5;
         insertPhotos(zPhotos, 9);
+      }
+      // Zone remarques
+      if(zone.remarques&&zone.remarques.trim()){
+        checkPage(14);
+        y+=2;
+        doc.setFontSize(8.5);doc.setTextColor(...ocre);doc.setFont('helvetica','bold');
+        doc.text('Remarques :',M,y);y+=5;
+        doc.setFontSize(8.5);doc.setTextColor(...darkText);doc.setFont('helvetica','normal');
+        const remarqLines = doc.splitTextToSize(zone.remarques.trim(), CW);
+        remarqLines.forEach(line=>{ checkPage(5); doc.text(line,M,y); y+=4.5; });
+        y+=2;
       }
       y+=4;
     });
